@@ -3,6 +3,8 @@ import { GAME_WIDTH, GAME_HEIGHT, COLORS, CHALISA } from '../config.js';
 import Player from '../entities/Player.js';
 import Enemy from '../entities/Enemy.js';
 import ScoreManager from '../systems/ScoreManager.js';
+import CombatFeel from '../systems/CombatFeel.js';
+import DepthFog from '../systems/DepthFog.js';
 
 export default class Act4Level1 extends Phaser.Scene {
   constructor() {
@@ -16,6 +18,9 @@ export default class Act4Level1 extends Phaser.Scene {
 
     // Score manager
     this.scoreManager = new ScoreManager(this);
+    this.combatFeel = new CombatFeel(this);
+    this.depthFog = new DepthFog(this);
+    this.depthFog.init('lanka');
 
     // --- World setup ---
     this.physics.world.setBounds(0, 0, 7000, GAME_HEIGHT);
@@ -54,12 +59,14 @@ export default class Act4Level1 extends Phaser.Scene {
     this.physics.add.collider(this.player.sprite, this.platforms);
     this.physics.add.overlap(this.player.maceHitbox, this.enemyGroup, (mace, esprite) => {
       if (esprite.enemyRef && !esprite.enemyRef.isDead) {
+        if (this.combatFeel) this.combatFeel.maceImpact(esprite, 1.0);
         esprite.enemyRef.takeDamage(2);
         this.player.onMaceConnected(esprite.x, esprite.y);
       }
     });
     this.physics.add.overlap(this.player.sprite, this.enemyGroup, (ps, esprite) => {
       if (esprite.enemyRef && !esprite.enemyRef.isDead) {
+        if (this.combatFeel) this.combatFeel.damageFlash();
         this.player.takeDamage(esprite.enemyRef.damage);
       }
     });
@@ -80,6 +87,9 @@ export default class Act4Level1 extends Phaser.Scene {
     // --- Controls ---
     this.cursors = this.input.keyboard.createCursorKeys();
     this.attackKey = this.input.keyboard.addKey('SPACE');
+    this.keyW = this.input.keyboard.addKey('W');
+    this.keyA = this.input.keyboard.addKey('A');
+    this.keyD = this.input.keyboard.addKey('D');
     this.touchState = { left: false, right: false, up: false, attack: false };
     this.setupTouchControls();
 
@@ -420,9 +430,9 @@ export default class Act4Level1 extends Phaser.Scene {
 
     // Virtual cursors (keyboard + touch)
     const vc = {
-      left: { isDown: this.cursors.left.isDown || this.touchState.left },
-      right: { isDown: this.cursors.right.isDown || this.touchState.right },
-      up: { isDown: this.cursors.up.isDown || this.touchState.up },
+      left: { isDown: this.cursors.left.isDown || this.keyA.isDown || this.touchState.left },
+      right: { isDown: this.cursors.right.isDown || this.keyD.isDown || this.touchState.right },
+      up: { isDown: this.cursors.up.isDown || this.keyW.isDown || this.touchState.up },
     };
 
     this.player.update(vc, this.attackKey, delta);

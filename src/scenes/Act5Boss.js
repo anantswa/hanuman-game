@@ -2,6 +2,10 @@ import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT, PLAYER, COLORS, CHALISA } from '../config.js';
 import Player from '../entities/Player.js';
 import ScoreManager from '../systems/ScoreManager.js';
+import CombatFeel from '../systems/CombatFeel.js';
+import DepthFog from '../systems/DepthFog.js';
+import GlowSystem from '../systems/GlowSystem.js';
+import SiddhiSystem from '../systems/SiddhiSystem.js';
 
 export default class Act5Boss extends Phaser.Scene {
   constructor() {
@@ -28,6 +32,10 @@ export default class Act5Boss extends Phaser.Scene {
 
     // --- Systems ---
     this.scoreManager = new ScoreManager(this);
+    this.combatFeel = new CombatFeel(this);
+    this.glowSystem = new GlowSystem(this);
+    this.depthFog = new DepthFog(this);
+    this.depthFog.init('lankaFire');
 
     // --- Arena setup ---
     const ARENA_WIDTH = 1000;
@@ -108,8 +116,12 @@ export default class Act5Boss extends Phaser.Scene {
 
     // --- Collisions ---
     this.physics.add.overlap(this.player.maceHitbox, this.boss, () => this.hitBoss());
-    this.physics.add.overlap(this.player.sprite, this.boss, () => this.player.takeDamage(1));
+    this.physics.add.overlap(this.player.sprite, this.boss, () => {
+      if (this.combatFeel) this.combatFeel.damageFlash();
+      this.player.takeDamage(1);
+    });
     this.physics.add.overlap(this.player.sprite, this.projectiles, (ps, proj) => {
+      if (this.combatFeel) this.combatFeel.damageFlash();
       this.player.takeDamage(1);
       proj.destroy();
     });
@@ -476,6 +488,8 @@ export default class Act5Boss extends Phaser.Scene {
   hitBoss() {
     if (this.bossInvincible || this.bossDefeated || !this.player.isAttacking) return;
 
+    if (this.combatFeel) this.combatFeel.maceImpact(this.boss, 1.0);
+
     this.bossHealth--;
     this.bossInvincible = true;
 
@@ -649,6 +663,9 @@ export default class Act5Boss extends Phaser.Scene {
 
   cleanup() {
     if (this.scoreManager) this.scoreManager.destroy();
+    if (this.combatFeel) this.combatFeel.destroy();
+    if (this.depthFog) this.depthFog.destroy();
+    if (this.glowSystem) this.glowSystem.destroy();
   }
 
   update(time, delta) {

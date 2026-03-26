@@ -3,6 +3,10 @@ import { GAME_WIDTH, GAME_HEIGHT, PLAYER, COLORS } from '../config.js';
 import Player from '../entities/Player.js';
 import Enemy from '../entities/Enemy.js';
 import ScoreManager from '../systems/ScoreManager.js';
+import CombatFeel from '../systems/CombatFeel.js';
+import DepthFog from '../systems/DepthFog.js';
+import GlowSystem from '../systems/GlowSystem.js';
+import SiddhiSystem from '../systems/SiddhiSystem.js';
 
 const ARENA_WIDTH = 1200;
 const ARENA_HEIGHT = 600;
@@ -33,6 +37,10 @@ export default class Act3Boss extends Phaser.Scene {
 
     // --- Systems ---
     this.scoreManager = new ScoreManager(this);
+    this.combatFeel = new CombatFeel(this);
+    this.glowSystem = new GlowSystem(this);
+    this.depthFog = new DepthFog(this);
+    this.depthFog.init('lanka');
 
     // --- Background: Lanka's outer wall — dark, menacing ---
     this.wallBg = this.add.tileSprite(0, 0, GAME_WIDTH, GAME_HEIGHT, 'sky-cosmic')
@@ -144,19 +152,25 @@ export default class Act3Boss extends Phaser.Scene {
     // --- Collisions ---
     this.physics.add.overlap(this.player.maceHitbox, this.lankini, () => this.hitBoss());
     this.physics.add.overlap(this.player.sprite, this.lankini, () => {
-      if (!this.bossDefeated) this.player.takeDamage(1);
+      if (!this.bossDefeated) {
+        if (this.combatFeel) this.combatFeel.damageFlash();
+        this.player.takeDamage(1);
+      }
     });
     this.physics.add.overlap(this.player.sprite, this.shockwaves, (ps, sw) => {
+      if (this.combatFeel) this.combatFeel.damageFlash();
       this.player.takeDamage(1);
     });
     this.physics.add.overlap(this.player.maceHitbox, this.minionGroup, (mh, minionSprite) => {
       if (minionSprite.enemyRef && !minionSprite.enemyRef.isDead) {
+        if (this.combatFeel) this.combatFeel.maceImpact(minionSprite, 1.0);
         this.player.onMaceConnected(minionSprite.x, minionSprite.y);
         minionSprite.enemyRef.takeDamage(2);
       }
     });
     this.physics.add.overlap(this.player.sprite, this.minionGroup, (ps, minionSprite) => {
       if (minionSprite.enemyRef && !minionSprite.enemyRef.isDead) {
+        if (this.combatFeel) this.combatFeel.damageFlash();
         this.player.takeDamage(1);
       }
     });
@@ -399,6 +413,8 @@ export default class Act3Boss extends Phaser.Scene {
   hitBoss() {
     if (this.bossInvincible || this.bossDefeated || !this.player.isAttacking) return;
 
+    if (this.combatFeel) this.combatFeel.maceImpact(this.lankini, 1.0);
+
     this.bossHealth--;
     this.bossInvincible = true;
 
@@ -598,6 +614,9 @@ export default class Act3Boss extends Phaser.Scene {
 
   cleanup() {
     if (this.scoreManager) this.scoreManager.destroy();
+    if (this.combatFeel) this.combatFeel.destroy();
+    if (this.depthFog) this.depthFog.destroy();
+    if (this.glowSystem) this.glowSystem.destroy();
   }
 
   update(time, delta) {

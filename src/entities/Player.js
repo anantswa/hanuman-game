@@ -24,7 +24,10 @@ const MOVE = {
   gentleGravity: 200,     // soft float when not flying (not plummeting)
   fullGravity: 600,       // normal gravity for grounded acts
   airControl: 1.0,        // full control in air
-  coyoteTime: 100,        // ms grace period
+  coyoteTime: 150,        // ms grace period (150ms per research)
+  jumpBuffer: 100,        // ms — register jump pressed before landing
+  cornerCorrection: 4,    // px — nudge through tile clips
+  halfGravityThreshold: 50, // velocity threshold for apex half-gravity
   // Dash
   dashSpeed: 720,         // 3x normal
   dashDuration: 300,      // ms
@@ -81,6 +84,9 @@ export default class Player {
     // Devotion meter
     this.devotion = 0;
     this.timeSinceLastDamage = 0;
+
+    // Jump buffering
+    this.jumpBufferedTime = 0; // time when jump was last pressed
 
     // Coyote time
     this.lastGroundedTime = 0;
@@ -268,6 +274,14 @@ export default class Player {
       body.setVelocityY(this.velY);
       this.changeState(STATES.FLYING);
     } else {
+      // HALF-GRAVITY JUMP PEAK: divine weightlessness at apex
+      // When rising slowly and UP is held (or recently released), halve gravity
+      // This makes Hanuman's flight feel cosmic and suspended
+      if (!onGround && Math.abs(body.velocity.y) < MOVE.halfGravityThreshold) {
+        body.setGravityY(-MOVE.gentleGravity * 0.5); // counteract half the gravity
+      } else {
+        body.setGravityY(0); // let world gravity handle it normally
+      }
       // Gentle gravity (floaty, not plummeting)
       this.velY = body.velocity.y; // let Phaser gravity handle it
     }
@@ -435,11 +449,17 @@ export default class Player {
     if (this.attackHitConnected) return; // only once per swing
     this.attackHitConnected = true;
 
-    // HIT-STOP: freeze physics for 50ms
-    this.scene.physics.world.timeScale = 10; // slow down 10x (effectively freezes)
-    this.scene.time.delayedCall(MOVE.hitStopDuration, () => {
-      this.scene.physics.world.timeScale = 1;
-    });
+    // Use CombatFeel system if available (timeScale=0.01 keeps shaders alive)
+    if (this.scene.combatFeel) {
+      this.scene.combatFeel.maceImpact(
+        { x: enemyX, y: enemyY, active: true, setTintFill: () => {}, clearTint: () => {} },
+        1.0
+      );
+    } else {
+      // Fallback: direct physics timeScale freeze
+      this.scene.physics.world.timeScale = 100;
+      setTimeout(() => { this.scene.physics.world.timeScale = 1; }, MOVE.hitStopDuration);
+    }
 
     // Screen shake
     this.scene.cameras.main.shake(80, 0.012);

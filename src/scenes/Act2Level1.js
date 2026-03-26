@@ -4,6 +4,10 @@ import Player from '../entities/Player.js';
 import Enemy from '../entities/Enemy.js';
 import ScoreManager from '../systems/ScoreManager.js';
 import ParticleManager from '../systems/ParticleManager.js';
+import CombatFeel from '../systems/CombatFeel.js';
+import DepthFog from '../systems/DepthFog.js';
+import GlowSystem from '../systems/GlowSystem.js';
+import SiddhiSystem from '../systems/SiddhiSystem.js';
 
 export default class Act2Level1 extends Phaser.Scene {
   constructor() {
@@ -39,6 +43,10 @@ export default class Act2Level1 extends Phaser.Scene {
     this.scoreManager = new ScoreManager(this);
     this.particleManager = new ParticleManager(this);
     this.particleManager.init({ width: GAME_WIDTH, height: GAME_HEIGHT });
+    this.combatFeel = new CombatFeel(this);
+    this.glowSystem = new GlowSystem(this);
+    this.depthFog = new DepthFog(this);
+    this.depthFog.init('forest');
 
     // --- Parallax Backgrounds ---
     this.skyBg = this.add.tileSprite(0, 0, GAME_WIDTH, GAME_HEIGHT, 'sky-dawn')
@@ -580,6 +588,7 @@ export default class Act2Level1 extends Phaser.Scene {
   // ── COLLISION CALLBACKS ──
   onMaceHitEnemy(maceHitbox, enemySprite) {
     if (enemySprite.enemyRef && !enemySprite.enemyRef.isDead) {
+      if (this.combatFeel) this.combatFeel.maceImpact(enemySprite, 1.0);
       this.player.onMaceConnected(enemySprite.x, enemySprite.y);
       enemySprite.enemyRef.takeDamage(2);
     }
@@ -587,6 +596,7 @@ export default class Act2Level1 extends Phaser.Scene {
 
   onPlayerTouchEnemy(playerSprite, enemySprite) {
     if (enemySprite.enemyRef && !enemySprite.enemyRef.isDead) {
+      if (this.combatFeel) this.combatFeel.damageFlash();
       this.player.takeDamage(enemySprite.enemyRef.damage);
     }
   }
@@ -711,6 +721,9 @@ export default class Act2Level1 extends Phaser.Scene {
   cleanup() {
     if (this.scoreManager) this.scoreManager.destroy();
     if (this.particleManager) this.particleManager.destroy();
+    if (this.combatFeel) this.combatFeel.destroy();
+    if (this.depthFog) this.depthFog.destroy();
+    if (this.glowSystem) this.glowSystem.destroy();
   }
 
   update(time, delta) {

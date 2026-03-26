@@ -2,6 +2,10 @@ import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT, PLAYER, COLORS } from '../config.js';
 import Player from '../entities/Player.js';
 import ScoreManager from '../systems/ScoreManager.js';
+import CombatFeel from '../systems/CombatFeel.js';
+import DepthFog from '../systems/DepthFog.js';
+import GlowSystem from '../systems/GlowSystem.js';
+import SiddhiSystem from '../systems/SiddhiSystem.js';
 
 export default class Act2Boss extends Phaser.Scene {
   constructor() {
@@ -26,6 +30,12 @@ export default class Act2Boss extends Phaser.Scene {
     this.levelComplete = false;
     this.bossDefeated = false;
     this.bossActive = false;
+
+    // --- Systems ---
+    this.combatFeel = new CombatFeel(this);
+    this.glowSystem = new GlowSystem(this);
+    this.depthFog = new DepthFog(this);
+    this.depthFog.init('forest');
 
     // --- Arena background: dark sacred forest ---
     this.skyBg = this.add.tileSprite(0, 0, GAME_WIDTH, GAME_HEIGHT, 'sky-dawn')
@@ -147,12 +157,14 @@ export default class Act2Boss extends Phaser.Scene {
     // Shadow touches player
     this.physics.add.overlap(this.player.sprite, this.shadow, () => {
       if (this.bossActive && !this.bossDefeated && this.shadowState === 'charging') {
+        if (this.combatFeel) this.combatFeel.damageFlash();
         this.player.takeDamage(1);
       }
     });
     // Shadow mace hits player
     this.physics.add.overlap(this.shadowMaceHitbox, this.player.sprite, () => {
       if (this.shadowMaceHitbox.body.enable) {
+        if (this.combatFeel) this.combatFeel.damageFlash();
         this.player.takeDamage(1);
       }
     });
@@ -238,6 +250,8 @@ export default class Act2Boss extends Phaser.Scene {
   // ── HIT BOSS ──
   hitBoss() {
     if (this.bossInvincible || this.bossDefeated || !this.player.isAttacking) return;
+
+    if (this.combatFeel) this.combatFeel.maceImpact(this.shadow, 1.0);
 
     // Only takes 2 damage from mace
     this.bossHealth -= 2;

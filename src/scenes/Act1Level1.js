@@ -4,6 +4,11 @@ import Player from '../entities/Player.js';
 import Enemy from '../entities/Enemy.js';
 import ScoreManager from '../systems/ScoreManager.js';
 import ParticleManager from '../systems/ParticleManager.js';
+import CombatFeel from '../systems/CombatFeel.js';
+import DepthFog from '../systems/DepthFog.js';
+import GlowSystem from '../systems/GlowSystem.js';
+import SiddhiSystem from '../systems/SiddhiSystem.js';
+import VibrationCombat from '../systems/VibrationCombat.js';
 
 export default class Act1Level1 extends Phaser.Scene {
   constructor() {
@@ -32,6 +37,17 @@ export default class Act1Level1 extends Phaser.Scene {
     // --- Systems ---
     this.scoreManager = new ScoreManager(this);
     this.particleManager = new ParticleManager(this);
+    this.combatFeel = new CombatFeel(this);
+    this.depthFog = new DepthFog(this);
+    this.glowSystem = new GlowSystem(this);
+    this.siddhiSystem = new SiddhiSystem(this);
+    this.vibrationCombat = new VibrationCombat(this);
+
+    // Unlock Act 1 siddhis (Laghima — divine flight)
+    this.siddhiSystem.unlockForAct(1);
+
+    // Initialize vibration combat syllable tracker
+    this.vibrationCombat.init();
     this.particleManager.init({ width: GAME_WIDTH, height: GAME_HEIGHT });
 
     // --- Parallax Backgrounds ---
@@ -50,6 +66,12 @@ export default class Act1Level1 extends Phaser.Scene {
     // Altitude tint overlay (warm amber → neutral → cool indigo → golden glow)
     this.altitudeTint = this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0xFFB347, 0.08)
       .setOrigin(0, 0).setScrollFactor(0).setDepth(40).setBlendMode(Phaser.BlendModes.ADD);
+
+    // Depth fog — starts as forest biome, transitions with altitude
+    this.depthFog.init('forest', [
+      { depth: -80, scrollFactor: 0.08 },
+      { depth: -60, scrollFactor: 0.15 },
+    ]);
 
     // --- World setup ---
     this.physics.world.setBounds(0, -10000, GAME_WIDTH, 10600);
@@ -92,8 +114,13 @@ export default class Act1Level1 extends Phaser.Scene {
     this.sun.body.setImmovable(true);
     this.sun.setDepth(5);
 
-    // Sun glow aura (additive blend)
-    this.sunGlow = this.add.circle(GAME_WIDTH / 2, -9000, 120, 0xFFD700, 0.15);
+    // Sun glow aura — use proper radial gradient glow texture (Ori-style)
+    if (this.textures.exists('glow-sun')) {
+      this.sunGlow = this.add.image(GAME_WIDTH / 2, -9000, 'glow-sun');
+      this.sunGlow.setScale(4).setAlpha(0.35);
+    } else {
+      this.sunGlow = this.add.circle(GAME_WIDTH / 2, -9000, 120, 0xFFD700, 0.15);
+    }
     this.sunGlow.setDepth(4).setBlendMode(Phaser.BlendModes.ADD);
     this.tweens.add({
       targets: [this.sun, this.sunGlow],
@@ -158,6 +185,20 @@ export default class Act1Level1 extends Phaser.Scene {
     });
     this.events.on('devotionBonus', (pts) => {
       this.scoreManager.score += pts;
+      this.scoreManager.updateUI();
+    });
+    // Vibration Combat: divine intervention (verse completed through combat)
+    this.events.on('divineIntervention', (data) => {
+      for (const enemy of this.enemies) {
+        if (!enemy.isDead) {
+          const dx = Math.abs(enemy.sprite.x - this.player.sprite.x);
+          const dy = Math.abs(enemy.sprite.y - this.player.sprite.y);
+          if (dx < GAME_WIDTH && dy < GAME_HEIGHT) {
+            enemy.takeDamage(999);
+          }
+        }
+      }
+      this.scoreManager.score += data.bonusPoints;
       this.scoreManager.updateUI();
     });
     this.events.on('devotionChanged', (val, max) => {
@@ -356,8 +397,16 @@ export default class Act1Level1 extends Phaser.Scene {
 
   onMaceHitEnemy(maceHitbox, enemySprite) {
     if (enemySprite.enemyRef && !enemySprite.enemyRef.isDead) {
-      // Trigger hit-stop on player
+      // CombatFeel: hit-stop + camera punch + particles
+      if (this.combatFeel) {
+        this.combatFeel.maceImpact(enemySprite, 1.0);
+      }
+      // Player hit-stop callback
       this.player.onMaceConnected(enemySprite.x, enemySprite.y);
+      // Vibration combat: count syllable
+      if (this.vibrationCombat) {
+        this.vibrationCombat.onMaceHit();
+      }
       enemySprite.enemyRef.takeDamage(2);
     }
   }
@@ -365,6 +414,10 @@ export default class Act1Level1 extends Phaser.Scene {
   onPlayerTouchEnemy(playerSprite, enemySprite) {
     if (enemySprite.enemyRef && !enemySprite.enemyRef.isDead) {
       this.player.takeDamage(enemySprite.enemyRef.damage);
+      // CombatFeel: damage flash
+      if (this.combatFeel) {
+        this.combatFeel.damageFlash();
+      }
     }
   }
 
@@ -462,6 +515,10 @@ export default class Act1Level1 extends Phaser.Scene {
   cleanup() {
     if (this.scoreManager) this.scoreManager.destroy();
     if (this.particleManager) this.particleManager.destroy();
+    if (this.combatFeel) this.combatFeel.destroy();
+    if (this.depthFog) this.depthFog.destroy();
+    if (this.glowSystem) this.glowSystem.destroy();
+    if (this.vibrationCombat) this.vibrationCombat.destroy();
   }
 
   update(time, delta) {
@@ -524,6 +581,20 @@ export default class Act1Level1 extends Phaser.Scene {
 
     // Update altitude particles
     this.particleManager.updateAltitude(altNorm);
+
+    // Depth fog biome transitions with altitude
+    if (this.depthFog) {
+      if (altNorm < 0.22) this.depthFog.transitionTo('forest');
+      else if (altNorm < 0.56) this.depthFog.transitionTo('clouds');
+      else if (altNorm < 0.89) this.depthFog.transitionTo('cosmic');
+      else this.depthFog.transitionTo('sun');
+
+      // Devotion intensity reduces fog (world becomes more divine)
+      this.depthFog.updateDevotionIntensity(this.player.getDevotionPercent());
+    }
+
+    // Update glow system
+    if (this.glowSystem) this.glowSystem.update();
 
     // Movement trail particles
     const speed = Math.sqrt(

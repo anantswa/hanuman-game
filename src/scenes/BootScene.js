@@ -1,4 +1,5 @@
 import { generateAssets } from '../utils/AssetGenerator.js';
+import GlowSystem from '../systems/GlowSystem.js';
 
 export default class BootScene extends Phaser.Scene {
   constructor() {
@@ -22,6 +23,9 @@ export default class BootScene extends Phaser.Scene {
   create() {
     // Generate all procedural assets (backgrounds, enemies, UI, etc.)
     generateAssets(this);
+
+    // Generate glow textures (additive radial gradients — Ori-style lighting)
+    GlowSystem.generateTextures(this);
 
     // If the hanuman sprite image loaded, override the procedural textures
     if (this.textures.exists('hanuman-sprite')) {
