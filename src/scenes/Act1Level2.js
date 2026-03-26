@@ -1,6 +1,8 @@
+import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT, PLAYER } from '../config.js';
 import Player from '../entities/Player.js';
 import Enemy from '../entities/Enemy.js';
+import ScoreManager from '../systems/ScoreManager.js';
 
 export default class Act1Level2 extends Phaser.Scene {
   constructor() {
@@ -76,8 +78,8 @@ export default class Act1Level2 extends Phaser.Scene {
     // Events
     this.events.on('playerDamaged', (h) => this.updateHealthDisplay(h));
     this.events.on('playerDied', () => this.onPlayerDied());
-    this.events.on('enemyKilled', (s) => {
-      this.score += s;
+    this.events.on('enemyKilled', (data) => {
+      this.score += data.scoreValue || 200;
       this.scoreText.setText(`Score: ${this.score}`);
     });
   }
@@ -246,10 +248,10 @@ export default class Act1Level2 extends Phaser.Scene {
       right: { isDown: this.cursors.right.isDown || this.touchState.right },
       up: { isDown: this.cursors.up.isDown || this.touchState.up },
     };
-    this.player.update(vc, this.attackKey);
+    this.player.update(vc, this.attackKey, delta);
     if (this.touchState.attack) {
       this.touchState.attack = false;
-      if (!this.player.isAttacking) this.player.attack();
+      if (!this.player.isAttacking) this.player.startAttack();
     }
 
     const pp = this.player.getPosition();

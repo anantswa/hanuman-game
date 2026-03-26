@@ -6,6 +6,16 @@ import ChalisaTransition from './scenes/ChalisaTransition.js';
 import Act1Level1 from './scenes/Act1Level1.js';
 import Act1Level2 from './scenes/Act1Level2.js';
 import Act1Boss from './scenes/Act1Boss.js';
+import Act2Level1 from './scenes/Act2Level1.js';
+import Act2Boss from './scenes/Act2Boss.js';
+import Act3Level1 from './scenes/Act3Level1.js';
+import Act3Boss from './scenes/Act3Boss.js';
+import Act4Level1 from './scenes/Act4Level1.js';
+import Act4Level2 from './scenes/Act4Level2.js';
+import Act5Level1 from './scenes/Act5Level1.js';
+import Act5Level2 from './scenes/Act5Level2.js';
+import Act5Boss from './scenes/Act5Boss.js';
+import Epilogue from './scenes/Epilogue.js';
 import ActComplete from './scenes/ActComplete.js';
 
 // Destroy previous game instance on HMR
@@ -38,6 +48,16 @@ const config = {
     Act1Level1,
     Act1Level2,
     Act1Boss,
+    Act2Level1,
+    Act2Boss,
+    Act3Level1,
+    Act3Boss,
+    Act4Level1,
+    Act4Level2,
+    Act5Level1,
+    Act5Level2,
+    Act5Boss,
+    Epilogue,
     ActComplete,
   ],
 };

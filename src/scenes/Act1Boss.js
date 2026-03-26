@@ -1,3 +1,4 @@
+import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT, PLAYER } from '../config.js';
 import Player from '../entities/Player.js';
 
@@ -369,10 +370,10 @@ export default class Act1Boss extends Phaser.Scene {
       right: { isDown: this.cursors.right.isDown || this.touchState.right },
       up: { isDown: this.cursors.up.isDown || this.touchState.up },
     };
-    this.player.update(vc, this.attackKey);
+    this.player.update(vc, this.attackKey, delta);
     if (this.touchState.attack) {
       this.touchState.attack = false;
-      if (!this.player.isAttacking) this.player.attack();
+      if (!this.player.isAttacking) this.player.startAttack();
     }
 
     // Boss attack patterns

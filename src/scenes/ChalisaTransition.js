@@ -14,9 +14,16 @@ export default class ChalisaTransition extends Phaser.Scene {
 
   create() {
     console.log('[Chalisa] Creating transition, couplet:', this.coupletKey, '→ next:', this.nextScene);
-    const couplet = CHALISA[`act${this.act}`][this.coupletKey];
+    // Look up couplet — check act-specific first, then top-level (victory, epilogue, death)
+    let couplet = null;
+    const actData = CHALISA[`act${this.act}`];
+    if (actData && actData[this.coupletKey]) {
+      couplet = actData[this.coupletKey];
+    } else if (CHALISA[this.coupletKey]) {
+      couplet = CHALISA[this.coupletKey];
+    }
     if (!couplet) {
-      console.warn('[Chalisa] No couplet found, skipping to', this.nextScene);
+      console.warn('[Chalisa] No couplet found for', this.act, this.coupletKey, '— skipping to', this.nextScene);
       this.scene.start(this.nextScene, this.nextSceneData);
       return;
     }
@@ -173,24 +180,57 @@ export default class ChalisaTransition extends Phaser.Scene {
       },
     });
 
-    // Allow continue after a brief moment (fast for testing)
+    // Allow continue after a brief moment
     this.canContinue = false;
-    this.time.delayedCall(1000, () => { this.canContinue = true; });
-    setTimeout(() => { this.canContinue = true; }, 1200);
+    this.time.delayedCall(1000, () => {
+      this.canContinue = true;
+      console.log('[Chalisa] canContinue = true (delayedCall)');
+    });
+    setTimeout(() => {
+      this.canContinue = true;
+      console.log('[Chalisa] canContinue = true (setTimeout)');
+    }, 1200);
 
-    this.input.keyboard.on('keydown', () => this.continue());
-    this.input.on('pointerdown', () => this.continue());
+    // Keyboard input
+    this.input.keyboard.on('keydown', (event) => {
+      console.log('[Chalisa] keydown:', event.key, 'canContinue:', this.canContinue);
+      this.continueToNext();
+    });
+    // Pointer input
+    this.input.on('pointerdown', () => {
+      console.log('[Chalisa] pointerdown, canContinue:', this.canContinue);
+      this.continueToNext();
+    });
+
+    // FALLBACK: Also listen at the document level in case Phaser input isn't capturing
+    this._docHandler = () => {
+      console.log('[Chalisa] document click fallback, canContinue:', this.canContinue);
+      this.continueToNext();
+    };
+    document.addEventListener('click', this._docHandler);
+    document.addEventListener('keydown', this._docHandler);
   }
 
-  continue() {
-    if (!this.canContinue) return;
+  continueToNext() {
+    if (!this.canContinue) {
+      console.log('[Chalisa] continueToNext called but canContinue is false');
+      return;
+    }
     this.canContinue = false;
     console.log('[Chalisa] → Continuing to', this.nextScene);
+
+    // Clean up document-level listeners
+    if (this._docHandler) {
+      document.removeEventListener('click', this._docHandler);
+      document.removeEventListener('keydown', this._docHandler);
+    }
 
     try {
       this.scene.start(this.nextScene, this.nextSceneData);
     } catch (e) {
       console.error('[Chalisa] Scene start failed:', e);
+      // Re-enable so user can try again
+      this.canContinue = true;
     }
   }
 }
