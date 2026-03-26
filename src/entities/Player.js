@@ -97,12 +97,13 @@ export default class Player {
     this.sprite.setDepth(10);
 
     // Scale based on real image vs procedural sprite
+    // Real PNGs are 1024x1536 — scale to ~120px tall on screen
     const texFrame = scene.textures.getFrame('hanuman-idle');
     if (texFrame && texFrame.width > 100) {
-      const imgScale = 60 / texFrame.height;
+      const imgScale = 120 / texFrame.height;
       this.sprite.setScale(imgScale);
-      this.sprite.body.setSize(texFrame.width * 0.6, texFrame.height * 0.7);
-      this.sprite.body.setOffset(texFrame.width * 0.2, texFrame.height * 0.15);
+      this.sprite.body.setSize(texFrame.width * 0.5, texFrame.height * 0.55);
+      this.sprite.body.setOffset(texFrame.width * 0.25, texFrame.height * 0.25);
     } else {
       this.sprite.setScale(2.2);
       this.sprite.body.setSize(20, 28);

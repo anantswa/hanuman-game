@@ -26,8 +26,9 @@ export default class Act1Level2 extends Phaser.Scene {
     this.physics.world.setBounds(0, 0, 8000, GAME_HEIGHT);
     this.physics.world.gravity.y = PLAYER.gravity * 0.5; // Less gravity in space
 
-    // Player
+    // Player — constrained to screen vertically
     this.player = new Player(this, 100, GAME_HEIGHT / 2);
+    this.player.sprite.body.setCollideWorldBounds(true);
 
     // Camera follows horizontally
     this.cameras.main.startFollow(this.player.sprite, true, 0.3, 0.1);

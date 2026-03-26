@@ -9,8 +9,11 @@ export default class BootScene extends Phaser.Scene {
   }
 
   preload() {
-    // Load the Hanuman sprite image
-    this.load.image('hanuman-sprite', './hanuman.png');
+    // Load all 4 Hanuman character sprites
+    this.load.image('hanuman-idle-png', './hanuman-idle.png');
+    this.load.image('hanuman-fly-png', './hanuman-fly.png');
+    this.load.image('hanuman-attack-png', './hanuman-attack.png');
+    this.load.image('hanuman-hurt-png', './hanuman-hit.png');
 
     // Loading text
     this.add.text(400, 300, 'Jai Hanuman...', {
@@ -27,24 +30,32 @@ export default class BootScene extends Phaser.Scene {
     // Generate glow textures (additive radial gradients — Ori-style lighting)
     GlowSystem.generateTextures(this);
 
-    // If the hanuman sprite image loaded, override the procedural textures
-    if (this.textures.exists('hanuman-sprite')) {
-      // Use the loaded image for all Hanuman states
-      // We'll use the same image but Phaser allows re-keying
-      const srcTexture = this.textures.get('hanuman-sprite');
-      const frame = srcTexture.get();
+    // Override procedural Hanuman sprites with real art if loaded
+    const spriteMap = {
+      'hanuman-idle': 'hanuman-idle-png',
+      'hanuman-fly': 'hanuman-fly-png',
+      'hanuman-attack': 'hanuman-attack-png',
+      'hanuman-hurt': 'hanuman-hurt-png',
+    };
 
-      // Remove old procedural textures and replace with the loaded image
-      ['hanuman-idle', 'hanuman-fly', 'hanuman-attack'].forEach((key) => {
-        if (this.textures.exists(key)) {
-          this.textures.remove(key);
+    let loadedCount = 0;
+    for (const [gameKey, loadKey] of Object.entries(spriteMap)) {
+      if (this.textures.exists(loadKey)) {
+        const srcTexture = this.textures.get(loadKey);
+        // Remove the procedural placeholder
+        if (this.textures.exists(gameKey)) {
+          this.textures.remove(gameKey);
         }
-        // Add the loaded image under each key
-        this.textures.addImage(key, srcTexture.source[0].image);
-      });
-      console.log('[Boot] Hanuman sprite image loaded and applied');
+        // Replace with the real art
+        this.textures.addImage(gameKey, srcTexture.source[0].image);
+        loadedCount++;
+      }
+    }
+
+    if (loadedCount > 0) {
+      console.log(`[Boot] ${loadedCount} Hanuman sprites loaded from PNGs`);
     } else {
-      console.log('[Boot] No hanuman sprite image found, using procedural sprites');
+      console.log('[Boot] No Hanuman PNGs found, using procedural sprites');
     }
 
     this.bootTimer = 0;
@@ -60,7 +71,6 @@ export default class BootScene extends Phaser.Scene {
     }, 2500);
   }
 
-  // update() runs every frame — if the game loop IS active, this transitions faster
   update(time, delta) {
     if (this.transitioned) return;
     this.bootTimer += delta;
